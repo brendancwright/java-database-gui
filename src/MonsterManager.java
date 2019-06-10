@@ -1,28 +1,39 @@
-import java.io.FileNotFoundException;
+/* Brendan Wright
+ * 12-05-2017
+ * Java version 8
+ * Includes: Bestiary.java, Monster.java
+ * COP2552.0M1
+ * Final Project */
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.net.URI;
+import java.util.Optional;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
  
 public class MonsterManager extends Application {
- 
-	// window is a Stage object
-	Stage window;
 	
 	// Bestiary object handles Bestiary methods
 	Bestiary bestiary = new Bestiary();
@@ -33,6 +44,9 @@ public class MonsterManager extends Application {
     // TextField objects for input
     TextField tfNameInput, tfFoodInput;
     
+    // Holds images
+    ImageView view = new ImageView();
+    
     // ObservableList of Monster objects is table data
     ObservableList<Monster> monsters = FXCollections.observableArrayList();
     
@@ -42,18 +56,17 @@ public class MonsterManager extends Application {
  
     @Override
     public void start(Stage primaryStage) {
-    	// The primary stage is the window
-    	window = primaryStage;
-        window.setTitle("Monster Diet Manager");
+        primaryStage.setTitle("Monster Diet Manager");
 
-		// Label object serves as table title
+		// Table title
 		Label labelTitle = new Label("Monster Diets");
 		labelTitle.setFont(new Font("Arial", 20));
-		labelTitle.setPadding(new Insets(10, 0, 0, 0));
+		labelTitle.setAlignment(Pos.CENTER_LEFT);
+		labelTitle.setMinWidth(430);
 		
 		// Create TableColumn to display Monster Name
         TableColumn<Monster, String> nameColumn = new TableColumn<>("Monster Name");
-        nameColumn.setMinWidth(100);
+        nameColumn.setMaxWidth(2250);
         // Retrieves data to be stored in cell of this column
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         
@@ -63,134 +76,172 @@ public class MonsterManager extends Application {
         // Retrieves data to be stored in cell of this column
         foodColumn.setCellValueFactory(new PropertyValueFactory<>("food"));
  
-        // Instantiate text field for monster input
+        // Text field for monster input
         tfNameInput = new TextField();
         tfNameInput.setPromptText("Monster Name");
         tfNameInput.setMinWidth(100);
         
-        // Instantiate text field for food input
+        // Text field for food input
         tfFoodInput = new TextField();
         tfFoodInput.setPromptText("Food");
         
-        // Button adds new row with monster name input and food input
-        Button btnNew = new Button("New Row");
+        // Adds new row with data from text field inputs
+        Button btnNew = new Button("New Entry");
         btnNew.setOnAction(e -> newButton());
         
-        // Button adds food input to monster input if monster input already exists
-        Button btnAddFood = new Button("Edit Food");
-        btnAddFood.setOnAction(e -> editButton());
+        // Edit row
+        Button btnEdit = new Button("Edit");
+        btnEdit.setOnAction(e -> {
+        	try {
+				editButton();
+			} catch (Exception RuntimeException) {
+				// User must select a row
+				errorMessage("Select the row you would like to edit.");
+			}
+        });
         
-        // Searches for monster name only
+        // Search name, return foods
         Button btnSearch = new Button("Search");
         btnSearch.setOnAction(e -> searchButton());
         
-        // Display menu about program and how to use it
+        // Add image associated with row
+        Button btnAddImage = new Button("Add Image");
+        btnAddImage.setOnAction(e -> addImageButton());
+        
+        // How to use program
         Button btnHelp = new Button("Help");
-        btnHelp.setOnAction(e -> {
-        	Alert alert = new Alert(AlertType.INFORMATION);
-        	alert.setTitle("Help");
-        	alert.setHeaderText(null);
-        	alert.setContentText(
-        				"Load: Loads data into table from existing file.\n"
-        				+ "Save: Saves data in table into a file. Will overwrite existing file.\n"
-        				+ "New Row: Adds a new monster and what it eats into table.\n"
-        				+ "Edit Food: Adds specified food to list of things specified monster eats.\n"
-        				+ "Search: Searches for specified monster and displays what that monster eats.\n"
-        				+ "\n\nYou may enter up to 100 monster names and up to 10 foods per monster."
-        			);
-        	alert.showAndWait();
-        });
+        btnHelp.setOnAction(e -> helpButton());
         
-        // Puts monsterArray of Bestiary class into ObservableList monsters
-        Button btnLoad = new Button("Load");
-        btnLoad.setOnAction(e -> {
-        	/* Load into monsters only if monsters is empty. This prevents overwriting on accidental
-        	 * button click */
-    		if (monsters.isEmpty()) {
-    			try {
-					bestiary.monsterListFromFile();
-				} catch (FileNotFoundException e1) {
-					// Display message letting user know there was no file found
-					Alert alert = new Alert(AlertType.ERROR);
-					alert.setTitle("Error");
-					alert.setHeaderText(null);
-					alert.setContentText("There was no file to load. Adding data and saving will "
-							+ "create a new file automatically.");
-					alert.showAndWait();
-				}
-    			monsters = getMonster();
-    		}
-			
-        });
-        
-        /* Put the list of Monster objects into monsterList of Bestiary class and
-         * save to text file. */
+        // Puts table data into text file
         Button btnSave = new Button("Save");
-        btnSave.snappedBottomInset();
-        btnSave.setOnAction(e -> {
-        	// Put ObservableList of Monsters into monsterList ArrayList
-			bestiary.setMonsterList(monsters);
-			// Saves monsterList ArrayList to file
-			try {
-				bestiary.monsterListToFile();
-			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
-			}
-		});
+        btnSave.setOnAction(e -> saveButton());
         
-        // Horizontal box holds text fields and buttons at bottom of window
-        HBox hb1 = new HBox();
-        hb1.setPadding(new Insets(10, 10, 10, 10));
-        hb1.setSpacing(10);
-        hb1.getChildren().addAll(tfNameInput, tfFoodInput, btnNew, btnAddFood, btnSearch);
+        // Gets table data from text file
+        Button btnLoad = new Button("Load");
+        btnLoad.setOnAction(e -> loadButton());
         
-        // Horizontal box holds buttons at top of window
-        HBox hb2 = new HBox();
-        hb2.setSpacing(10);
-        hb2.getChildren().addAll(btnHelp, btnSave, btnLoad);
+        // Container for buttons and label at top of window
+        HBox hbTop = new HBox();
+        hbTop.setPadding(new Insets(10, 10, 10, 10));
+        hbTop.setSpacing(10);
+        hbTop.getChildren().addAll(labelTitle, btnHelp, btnSave, btnLoad);
         
-        // AnchorPane formats title of table and buttons in hb2
-        AnchorPane topPane = new AnchorPane();
-        topPane.setPadding(new Insets(10, 10, 0, 10));
-        topPane.getChildren().addAll(labelTitle, hb2);
-        AnchorPane.setLeftAnchor(labelTitle, 0.0);
-        AnchorPane.setTopAnchor(hb2, 0.0);
-        AnchorPane.setRightAnchor(hb2, 0.0);
+        // Container for text fields and buttons at bottom of window
+        HBox hbBottom = new HBox();
+        hbBottom.setPadding(new Insets(10, 10, 0, 10));
+        hbBottom.setSpacing(10);
+        hbBottom.getChildren().addAll(tfNameInput, tfFoodInput, btnNew, btnEdit, btnSearch, btnAddImage);
         
-        // Instantiate the table, load with ObservableList monsters
+        // Maintain aspect ratio of images
+        view.setPreserveRatio(true);
+        view.setFitWidth(250);
+        
+        // Load table with ObservableList monsters, set properties
         table = new TableView<>();
         table.setItems(monsters);
+        table.setEditable(true);
+        table.setMaxWidth(600);
         
-        // If ObservableList is empty, show basic directions
+        // Listens for a clicked row, show the image for that row
+        table.setOnMousePressed(e -> {
+        	Monster selectedCell = table.getSelectionModel().getSelectedItem();
+        	try {
+				view.setImage(selectedCell.getImage());
+			} catch (Exception NullPointerException) {
+				// Click detected, but no image associated with source
+				;
+			}
+        });
+        
+        // Table is empty, show basic directions
         table.setPlaceholder(new Label("Either load an existing file "
         		+ "or add data\nand save to automatically generate a new file."));
+        
+        // Add columns to table
         table.getColumns().addAll(nameColumn, foodColumn);
         
-        // Vertical box container
-        VBox vBox = new VBox();
-        vBox.getChildren().addAll(topPane, table, hb1);
+        // Size columns to fit width of table instead of showing empty columns
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         
-        // Put the VBox on the scene, put the scene on the window, display window
-        Scene scene = new Scene(vBox);
-        window.setScene(scene);
-        window.show();
+        // Container for table and HBoxes
+        VBox vBox = new VBox();
+        vBox.setMaxWidth(650);
+        vBox.setPadding(new Insets(0, 10, 0, 10));
+        vBox.getChildren().addAll(hbTop, table, hbBottom);
+        
+        // Container for VBox and ImageView
+        GridPane grid = new GridPane();
+        grid.setPadding(new Insets(0, 5, 0, 0));
+        grid.add(vBox, 0, 0);
+        grid.add(view, 1, 0);
+        
+        // Put the grid on the scene, scene on the stage, show stage
+        Scene scene = new Scene(grid);
+        primaryStage.setScene(scene);
+        primaryStage.setResizable(false);
+        primaryStage.show();
+        
+        // File automatically found, ask user if they want to load it
+        if (bestiary.isFile()) {
+        	Alert alert = new Alert(AlertType.CONFIRMATION);
+        	alert.setTitle("Load File");
+        	alert.setHeaderText("File Found!");
+        	alert.setContentText("Would you like to load the existing file?");
+
+        	Optional<ButtonType> result = alert.showAndWait();
+        	if (result.get() == ButtonType.OK) {
+        	    loadButton();
+        	}
+        	else {
+        		;
+        	}
+        }
     }
     
-    
-    public ObservableList<Monster> getMonster() {
+    // Put Monster data into ObservableList, return ObservableList
+    public ObservableList<Monster> getMonsters() {
+    	// Get name, food, and image path from Bestiary class
     	for (Monster monster : bestiary.monsterList) {
     		String tempName = monster.getName();
     		String tempFoodList = monster.getFood();
+    		String tempPath = monster.getPath();
     		
+    		// Reformat data for display
     		tempName = tempName.replaceAll("_", " ");
     		tempFoodList = tempFoodList.replaceAll("_", " ");
     		
-    		monsters.add(new Monster(tempName, tempFoodList));
+    		// Create the Monster object, add to ObservableList
+    		monsters.add(new Monster(tempName, tempFoodList, tempPath));
     	}
     	return monsters;
     }
     
-    // Button adds new row with monster name input and food input
+    // Prompts user to pick image, returns image path
+    public String getImage() {
+    	// Stage object to display browse window
+    	Stage window = null;
+    	FileChooser fileChooser = new FileChooser();
+    	File selectedFile;
+    	
+    	// Limit the types of files user can select
+    	FileChooser.ExtensionFilter extFilterJPG = new FileChooser.ExtensionFilter("JPG files (*.jpg)", "*.JPG");
+        FileChooser.ExtensionFilter extFilterPNG = new FileChooser.ExtensionFilter("PNG files (*.png)", "*.PNG");
+        fileChooser.getExtensionFilters().addAll(extFilterJPG, extFilterPNG);
+    	
+    	fileChooser.setTitle("Open Image");
+    	
+    	// Display browse window via FileChooser method, return file into File object
+		selectedFile = fileChooser.showOpenDialog(window);
+		// Convert the absolute file path to a URI
+		URI uri = selectedFile.toURI();
+		// Convert URI to String
+		String path = uri.toString();
+    	
+    	// Return String representation of URI for Image object
+    	return path;
+    }
+    
+    // Adds new row with monster name input and food input
     public void newButton() {
     	// If both inputs aren't empty
     	if (!(tfNameInput.getText().equals("")) && !(tfFoodInput.getText().equals(""))) {
@@ -200,32 +251,37 @@ public class MonsterManager extends Application {
     		monster.setFood(tfFoodInput.getText().toLowerCase());
         	monsters.add(monster);
     	}
+    	else {
+    		errorMessage("Enter a monster and what it eats.");
+    	}
     	// Clear text fields
     	tfNameInput.clear();
     	tfFoodInput.clear();
     }
     
-    // Searches for monster name only
+    // Searches name, returns foods
     public void searchButton() {
     	boolean flag = false;
-    	// If user did not enter any search data, let user know
+    	// User did not enter any search data, let user know
     	if (tfNameInput.getText().equals("")) {
-			Alert alert = new Alert(AlertType.WARNING);
-			alert.setTitle("No Search Data");
-			alert.setHeaderText(null);
-			alert.setContentText("No search critera was entered.");
-			alert.showAndWait();
+			errorMessage("No search critera was entered.");
 		}
-    	// Else, look through all monster objects for search criteria
+    	// Look through all monster objects for search criteria
     	else {
     		for (Monster monster : monsters) {
         		if (tfNameInput.getText().toLowerCase().equals(monster.getName())) {
+        			// Display the image associated with located monster
+        			ImageView imageView = new ImageView(monster.getImage());
+        			imageView.setPreserveRatio(true);
+        	        imageView.setFitWidth(250);
+        			
         			// Show user search results
         			Alert alert = new Alert(AlertType.INFORMATION);
         			alert.setTitle("Found");
-        			alert.setHeaderText(null);
         			alert.setContentText(tfNameInput.getText() + " was found! "
         					+ "\n" + tfNameInput.getText() + " eats: " + monster.getFood());
+        			alert.setHeaderText(null);
+        			alert.setGraphic(imageView);
         			alert.showAndWait();
         			flag = true;
         			break;
@@ -234,11 +290,7 @@ public class MonsterManager extends Application {
         	}
     		// If search criteria was not found, let user know
     		if (!flag) {
-    			Alert alert = new Alert(AlertType.WARNING);
-    			alert.setTitle("Not Found");
-    			alert.setHeaderText(null);
-    			alert.setContentText(tfNameInput.getText() + " was not found.");
-    			alert.showAndWait();
+    			errorMessage(tfNameInput.getText() + " was not found.");
     		}
     	}
     	// Clear text fields
@@ -246,23 +298,126 @@ public class MonsterManager extends Application {
     	tfFoodInput.clear();
     }
     
-    // Button adds food input to monster input if monster input already exists
-    public void editButton() {
-    	boolean flag = false;
-    	// Search for monster in monsters, if found, add food input to existing food
-    	for (Monster monster : monsters) {
-    		if (tfNameInput.getText().toLowerCase().equals(monster.getName())) {
-    			monster.setFood(monster.getFood() + ", " + tfFoodInput.getText().toLowerCase());
-    			flag = true;
-    		}
+    // Prompt user to edit selected row
+    public void editButton() throws Exception {
+    	// Get the Monster object of the selected row
+    	Monster selectedCell = table.getSelectionModel().getSelectedItem();
+    	
+    	// User selection is not an existing Monster object
+    	if (selectedCell == null) {
+    		throw new RuntimeException();
     	}
-    	// Refreshes the table
-    	if (flag) {
+    	
+    	TextInputDialog dialog = new TextInputDialog("");
+    	dialog.setTitle("Edit");
+    	dialog.setHeaderText("Edit monster name and/or food.\nSeparate multiple foods with commas.");
+    	
+    	// Get name and food of Monster object, put it in a TextField
+    	TextField tfName = new TextField(selectedCell.getName());
+    	TextField tfFood = new TextField(selectedCell.getFood());
+    	
+    	// Container for TextFields and Labels
+    	GridPane grid = new GridPane();
+    	grid.setHgap(10);
+    	grid.setVgap(10);
+    	grid.setPadding(new Insets(10, 10, 10, 10));
+    	grid.add(new Label("Name: "), 0, 0);
+    	grid.add(new Label("Food: "), 1, 0);
+    	grid.add(tfName, 0, 1);
+    	grid.add(tfFood, 1, 1);
+    	
+    	// Open a window, put the GridPane on it
+    	dialog.getDialogPane().setContent(grid);
+    	// Optional object gets true for OK button press, false for Cancel button press
+    	Optional<String> result = dialog.showAndWait();
+    	
+    	// User clicks OK, take the data in the TextFields and update the Monster object
+    	result.ifPresent(e -> {
+    		selectedCell.setName(tfName.getText().toString());
+    		selectedCell.setFood(tfFood.getText().toString());
+    		// Refresh the table
     		table.getColumns().get(0).setVisible(false);
     		table.getColumns().get(0).setVisible(true);
+    	});
+    }
+    
+    // Gets a path to an image, put the path into Monster object, display image
+    public void addImageButton() {
+    	// Get Monster object of selected row
+    	Monster selectedCell = table.getSelectionModel().getSelectedItem();
+    	
+    	// User selection is a Monster object
+    	if (selectedCell != null) {
+    		try {
+    			// Prompt the user to find an image, store the path in Monster object
+				selectedCell.setImage(getImage());
+			} catch (Exception NullPointerException) {
+				// If user cancels image selection, this catches the null path
+				;
+			}
+    		// Put the image on the screen
+			view.setImage(selectedCell.getImage());
     	}
-    	// Clear text fields
-    	tfNameInput.clear();
-    	tfFoodInput.clear();
+    	// User selection is not a Monster object
+    	else {
+    		errorMessage("Select the row you would like to associate with an image.");
+    	}
+    }
+    
+    // Shows menu with program directions
+    public void helpButton() {
+    	Alert alert = new Alert(AlertType.INFORMATION);
+    	alert.setTitle("Help");
+    	alert.setHeaderText(null);
+    	alert.setContentText(
+    				"Load: Loads data into table from existing file.\n\n"
+    				+ "Save: Saves data in table into a file. Will overwrite existing file.\n\n"
+    				+ "New Entry: Adds a new monster and what it eats into table."
+    				+ " Separate multiple foods with commas.\n\n"
+    				+ "Edit: Opens prompt to edit selected row.\n\n"
+    				+ "Search: Searches for specified monster and displays what that monster eats.\n\n"
+    				+ "Add Image: Pick an image to associate with selected row."
+    			);
+    	alert.showAndWait();
+    }
+    
+    // Put table data into text file
+    public void saveButton() {
+    	// Save only works if there is data in the table, this prevents "deleting" an existing file
+    	if (!monsters.isEmpty()) {
+	    	// Put ObservableList of Monsters into monsterList ArrayList
+			bestiary.setMonsterList(monsters);
+			// Saves monsterList ArrayList to file
+			try {
+				bestiary.monsterListToFile();
+			} catch (Exception FileNotFoundException) {
+				;
+			}
+    	}
+    }
+    
+    // Put data from text file into table
+    public void loadButton() {
+    	/* Load into monsters only if monsters is empty. This prevents overwriting on accidental
+    	 * button click */
+    	if (monsters.isEmpty()) {
+			try {
+				bestiary.monsterListFromFile();
+			} catch (FileNotFoundException e1) {
+				// Display message letting user know there was no file found
+				errorMessage("There was no file to load. Adding data and saving will "
+						+ "create a new file automatically.");
+			}
+			monsters = getMonsters();
+		}
+    }
+    
+    // Displays a window with String errorMessage as message
+    public void errorMessage(String errorMessage) {
+    	Alert alert = new Alert(AlertType.ERROR);
+		alert.setTitle("Error");
+		alert.setHeaderText(null);
+		alert.setContentText(errorMessage);
+		alert.showAndWait();
     }
 } 

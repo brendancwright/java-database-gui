@@ -1,0 +1,7 @@
+beholder lots_o'_wine images/beholder.jpg
+gelatinous_cube anything_that_fits_inside images/gelatinous_cube.jpg
+mind_flayer brains images/mind_flayer.jpg
+owl_bear fish,_rabbits,_bears,_trolls,_snakes images/owl_bear.jpg
+red_dragon anything,_humans,_elves images/red_dragon.png
+rust_monster shields,_swords,_anything_metal images/rust_monster.jpg
+tarrasque towns,_adventurers,_worlds images/tarrasque.jpg
