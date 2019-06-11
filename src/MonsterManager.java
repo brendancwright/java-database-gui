@@ -264,12 +264,12 @@ public class MonsterManager extends Application {
     	boolean flag = false;
     	// User did not enter any search data, let user know
     	if (tfNameInput.getText().equals("")) {
-			errorMessage("No search critera was entered.");
+			errorMessage("No search criteria was entered.");
 		}
     	// Look through all monster objects for search criteria
     	else {
     		for (Monster monster : monsters) {
-        		if (tfNameInput.getText().toLowerCase().equals(monster.getName())) {
+        		if (monster.getName().contains(tfNameInput.getText().toLowerCase())) {
         			// Display the image associated with located monster
         			ImageView imageView = new ImageView(monster.getImage());
         			imageView.setPreserveRatio(true);
@@ -278,8 +278,8 @@ public class MonsterManager extends Application {
         			// Show user search results
         			Alert alert = new Alert(AlertType.INFORMATION);
         			alert.setTitle("Found");
-        			alert.setContentText(tfNameInput.getText() + " was found! "
-        					+ "\n" + tfNameInput.getText() + " eats: " + monster.getFood());
+        			alert.setContentText(monster.getName() + " was found! "
+        					+ "\n" + monster.getName() + " eats: " + monster.getFood());
         			alert.setHeaderText(null);
         			alert.setGraphic(imageView);
         			alert.showAndWait();
